@@ -1,7 +1,148 @@
-# File contains functions to implement Gene Set Enrichment Analysis (GSEA)
-# Mon/Year: Apr/2017
-# Author: R Kanchi
-# Assignment for the Genialis Bioinformatics position
+# Functions to implement Gene Set Enrichment Analysis (GSEA) based on
+# Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles,
+# Subramanian et al. 2005 PNAS 102(43): 15545-15550
+# Mon/Year: Apr/2017; Author: RS Kanchi
+
+
+# get.ExpressionData() is a function to extract the gene expression data and phenotype labels from 
+# a file with format as in leukemia.txt (example input file)
+# Input argument(s): tab delimited data file (as shown below) with k phenotypic labels in the first row, and 
+# expression data from second row onwards (N rows each with gene name followed by k expressions)
+# The file may or may not have a header but should contain rownames (pheno and gene names)
+#          sample1  sample2 ... samplek
+# pheno        A       B     ...  A
+# gene1    expr11   expr12  ...  expr1k
+# gene2    expr21   expr22  ...  expr2k
+# :
+# geneN    exprN1   exprN2  ...  exprNk
+# Function output: a list of three objects 1] a numeric N x k matrix of expression data, 2] a vector of phenotypic 
+# labels, and 3] a vector of gene labels (which is same as the rownames of matrix output)
+get.ExpressionData <- function(dataFile){
+  colnames(dataFile) <- paste("p",1:ncol(dataFile),sep="") 
+  phenLabels <- unlist(dataFile[1,])
+  dataFile <- as.matrix(dataFile[-1,])
+  class(dataFile) <- "numeric"
+  geneLabels <- rownames(dataFile) 
+  return(list("exprData"=dataFile,"phenLabels"=phenLabels,"geneLabels"=geneLabels))
+} # end of function get.ExpressionData
+
+###############################################################################
+# get.minPathways() is a function to get the pathways/gene sets with at least a specified number (minGenes) of genes
+# in each pathway that are in the gene list (genes for which expression data are available for two phenotype groups)
+# to help focus on robust signals
+# Input argument(s): the pathways text file (exaple data file pathways.txt), geneList (e.g. the genes in 
+# expression data file leukemia.txt) and the minimum number of genes (minGenes, default is 15)
+# Function output: a list of two objects - 1] the pathways text file with only pathways/gene sets that have more than
+# minGenes genes in common with the genes in expression data, and 2] a scalar giving the number of pathways/gene sets
+# in the reduced text file
+get.minPathways <- function(pathways,geneList,minGenes=15){ 
+  # compute the number of genes in each gene set common with the gene list 
+  Ncommon <-  sapply(1:nrow(pathways),FUN=function(x) { 
+    length(intersect(pathways[x,][pathways[x,] != ""],geneList)) })
+  # determine the gene sets with at least minGenes genes common with the gene list
+  minPathways <- pathways[which(Ncommon >= minGenes),]
+  NgeneSets <- nrow(minPathways)
+  message("Number of pathways with atleast ", minGenes," genes common with the gene list is ",NgeneSets)
+  return(list("minPathways"=minPathways,"NgeneSets"=NgeneSets))
+} #end of function get.minPathways
+
+################################################################################
+# compute.L computes a ranked list of genes using three input arguments
+# 1. the expression data matrix (N genes x k samples and no pheno labels) 
+# to rank order the N genes in it to form L = {g1,g2,...gN} according to a
+# 2. ranking metric (t-statistic, correlation etc) where the gene expression is the response variable and 
+# 3. the phenotype (here AML/ALL) is the explanatory variable
+# using switch so that ranking metric(s) can be added in future 
+
+compute.L <- function(exprData,phenLabels,rankMetric="t-statistic"){
+  L <- switch(rankMetric,
+              "t-statistic" = apply(exprData,1,function(x) t.test(x~phenLabels)$statistic),
+              "corr" = apply(exprData,1,function(x) { summ <- summary(lm(x~phenLabels)) 
+              sign(summ$coefficients[2,1])*sqrt(summ$r.squared) })
+  ) # end of switch
+  L <- sort(L,decreasing=TRUE) # sorted in decreasing order to get the ranked list of genes
+  return(L)
+} # end of compute.L
+
+################################################################################
+# compute.ES computes the enrichment score ES for a given gene set S using
+# the ranked list of genes L consisting of the ranking metric (t-statistic or corr etc) and 
+# the weight p to control the step size when a gene in S is hit during the walk (scan) from top to bottom of L 
+compute.ES <- function(S,L,p=1){
+  N <- length(L) # number of genes in the gene list
+  NH <- length(S)  # number of genes in the gene set S
+  contrib <- rep(-1/(N-NH), N)  # vector of contributions from each gene not in the set S
+  # now replacing the values in the positions of genes in set S with their contributions 
+  S.indices <- which(names(L) %in% S) # positions of S-genes in L
+  NR <-  sum(abs(L[S.indices])^p)
+  contrib[S.indices] <- abs(L[S.indices])^p/NR
+  Esi <- cumsum(contrib)
+  #plot(Esi,type = "l")
+  computedES <- Esi[which.max(abs(Esi))] # max deviation of Phit-Pmiss from 0; i.e. max abs value with its' sign
+  return(computedES)
+} # end of function compute.ES
+
+################################################################################
+# function to estimate significance of the observed ES using permutations
+# inputs are expression data (exprData), phenotypic labels (phenLabels for ex. AML, ALL..),
+# gene sets or pathways, minimum number of genes in a pathway that should be available in the 
+# expression data (minGenes),rankMetric, weight (p) to control the step size of the "hit" genes while computing ES
+# number of permutations (nperm), logical (TRUE/FALSE) on whether to fix the permutations across the pathways
+# fixperm = TRUE for computing NES,FWER and FDR; and FALSE for permutations based p value significance of ES
+# matrix of fixed permutaions (pi) can be supplied which will be computed if not
+perm.ES <- function(exprData, phenLabels, pathways, minGenes=25, rankMetric="t-statistic", p=1, 
+                    nperm=1000, fixPerm=FALSE, pi=NULL,computeMinpathways=FALSE){
+  if (computeMinpathways){
+    minGenePathways <- get.minPathways(pathways,rownames(exprData),minGenes)
+    minPathways <- minGenePathways$minPathways
+    NgeneSets <- minGenePathways$NgeneSets
+    rm(minGenePathways)
+  } else {minPathways <- pathways; NgeneSets <- nrow(minPathways)}
+  # observed ES for the pathways
+  message("Computing the observed ranked list of genes (L)")
+  L <- compute.L(exprData, phenLabels,rankMetric)
+  message("Computing the observed enrichment scores ES")
+  observed.ES <- sapply(1:NgeneSets,FUN=function(y) {Sy <- minPathways[y,][minPathways[y,] != ""]
+  compute.ES(Sy,L,p)})
+  names(observed.ES) <- rownames(minPathways)
+  
+  # a matrix of nperm permutations of pheno labels
+  k <- length(phenLabels)
+  # the fixed phenotype permutations for all S if fixPerm is TRUE (required for computing NES, FWER, FDR)
+  # the fixPerm would need to be FALSE if computing permutations based p-value for the observed ES
+  if (fixPerm & is.null(pi)) pi <- replicate(nperm,sample(k,k)) 
+  
+  # compute ES for all genesets for each permutation (fixed or otherwise)
+  message("Starting permutations..buiding a null distribution of enrichment scores")
+  piES <- sapply(1:nperm,FUN=function(x){
+    if (fixPerm) pheno.x <- phenLabels[pi[,x]] else pheno.x <- phenLabels[sample(k,k)]
+    Lx <- compute.L(exprData,pheno.x,rankMetric)
+    sapply(1:NgeneSets,FUN=function(y) {Sy <- minPathways[y,][minPathways[y,] != ""]
+    compute.ES(Sy,Lx,p)})
+  }) # end of computing piES (matrix of nrow = NgeneSets and ncol = nperm)
+  
+  # p-value using the positive or negative Es values depending on the sign of the observed ES
+  if (!(fixPerm)){  pval <- sapply(1:NgeneSets, FUN=function(x){
+    if (observed.ES[x] >= 0) { signed.nullES <- piES[x,][which(piES[x,] >= 0)]
+    pval <- sum(signed.nullES >= observed.ES[x])/length(signed.nullES)
+    } else {
+      signed.nullES <- piES[x,][which(piES[x,] <= 0)]
+      pval <- sum(signed.nullES <= observed.ES[x])/length(signed.nullES)
+    } # end of if-else    
+  }) # end of computing pval
+  resMat <- matrix(c(observed.ES,pval),nc=2)
+  rownames(resMat) <- rownames(minPathways); colnames(resMat) <- c("ES","Perm-pval")
+  } # end of if in fixPerm
+  
+  # if fixPerm is TRUE, returning two matrices
+  # pi (for reproducibility of results - the permutations were fixed for all S) and piES (for further computations) 
+  if (fixPerm)  return(list("observedES"= observed.ES,"rankedL"=L,"minPathways"=minPathways,"NgeneSets"=NgeneSets,
+                            "Nperm"=nperm,"rankMetric"=rankMetric,"weightP"=p,"pi"=pi,"piES"=piES))
+  else return(list("ES"=resMat,"rankedL"=L,"minPathways"=minPathways,
+                   "NgeneSets"=NgeneSets,"Nperm"=nperm,"rankMetric"=rankMetric,"weightP"=p))  
+} # end of function perm.ES
+
+
 
 # compute.NES computes the computes the normalized enrichment scores, FWER p-value, FDR q value
 # inputs are the expression data (exprData), phenotypic labels (phenLabels for ex. AML, ALL..), pathways file 
@@ -57,131 +198,3 @@ compute.NES <- function(exprData, phenLabels, pathways, minGenes=25, rankMetric=
   return(list("NormalizedES"=resMat,"observedES"= observed.ES,"rankedL"=L,"Nperm"=nperm,"minGenes"=minGenes,
               "rankMetric"=rankMetric,"weightP"=p,"fixedPermutations"=pi))  # returning fixed permutations for reproducibility of results
 } # end of compute.NES
-
-###############################################################################
-# function to get the pathways with at least a specified number (minGenes) of genes in each pathway that
-# are in the gene list (genes for which expression data are available for two phenotype groups
-get.minPathways <- function(pathways,geneList,minGenes=25){ 
-  # compute the number of genes in each gene set common with the gene list 
-  Ncommon <-  sapply(1:nrow(pathways),FUN=function(x) { 
-    length(intersect(pathways[x,][pathways[x,] != ""],geneList)) })
-  # determine the gene sets with at least minGenes genes common with the gene list
-  minPathways <- pathways[which(Ncommon >= minGenes),]
-  NgeneSets <- nrow(minPathways)
-  message("Number of pathways with atleast ", minGenes," genes common with the gene list is ",NgeneSets)
-  return(list("minPathways"=minPathways,"NgeneSets"=NgeneSets))
-} #end of function get.minPathways
-
-################################################################################
-# function to estimate significance of the observed ES using permutations
-# inputs are expression data (exprData), phenotypic labels (phenLabels for ex. AML, ALL..),
-# gene sets or pathways, minimum number of genes in a pathway that should be available in the 
-# expression data (minGenes),rankMetric, weight (p) to control the step size of the "hit" genes while computing ES
-# number of permutations (nperm), logical (TRUE/FALSE) on whether to fix the permutations across the pathways
-# fixperm = TRUE for computing NES,FWER and FDR; and FALSE for permutations based p value significance of ES
-# matrix of fixed permutaions (pi) can be supplied which will be computed if not
-perm.ES <- function(exprData, phenLabels, pathways, minGenes=25, rankMetric="t-statistic", p=1, 
-                    nperm=1000, fixPerm=FALSE, pi=NULL,computeMinpathways=FALSE){
-  if (computeMinpathways){
-        minGenePathways <- get.minPathways(pathways,rownames(exprData),minGenes)
-        minPathways <- minGenePathways$minPathways
-        NgeneSets <- minGenePathways$NgeneSets
-        rm(minGenePathways)
-  } else {minPathways <- pathways; NgeneSets <- nrow(minPathways)}
-  # observed ES for the pathways
-  message("Computing the observed ranked list of genes (L)")
-  L <- compute.L(exprData, phenLabels,rankMetric)
-  message("Computing the observed enrichment scores ES")
-  observed.ES <- sapply(1:NgeneSets,FUN=function(y) {Sy <- minPathways[y,][minPathways[y,] != ""]
-  compute.ES(Sy,L,p)})
-  names(observed.ES) <- rownames(minPathways)
-
-  # a matrix of nperm permutations of pheno labels
-  k <- length(phenLabels)
-  # the fixed phenotype permutations for all S if fixPerm is TRUE (required for computing NES, FWER, FDR)
-  # the fixPerm would need to be FALSE if computing permutations based p-value for the observed ES
-  if (fixPerm & is.null(pi)) pi <- replicate(nperm,sample(k,k)) 
-  
-  # compute ES for all genesets for each permutation (fixed or otherwise)
-  message("Starting permutations..buiding a null distribution of enrichment scores")
-  piES <- sapply(1:nperm,FUN=function(x){
-    if (fixPerm) pheno.x <- phenLabels[pi[,x]] else pheno.x <- phenLabels[sample(k,k)]
-    Lx <- compute.L(exprData,pheno.x,rankMetric)
-    sapply(1:NgeneSets,FUN=function(y) {Sy <- minPathways[y,][minPathways[y,] != ""]
-    compute.ES(Sy,Lx,p)})
-  }) # end of computing piES (matrix of nrow = NgeneSets and ncol = nperm)
-
-  # p-value using the positive or negative Es values depending on the sign of the observed ES
-  if (!(fixPerm)){  pval <- sapply(1:NgeneSets, FUN=function(x){
-      if (observed.ES[x] >= 0) { signed.nullES <- piES[x,][which(piES[x,] >= 0)]
-          pval <- sum(signed.nullES >= observed.ES[x])/length(signed.nullES)
-          } else {
-                    signed.nullES <- piES[x,][which(piES[x,] <= 0)]
-                    pval <- sum(signed.nullES <= observed.ES[x])/length(signed.nullES)
-                  } # end of if-else    
-    }) # end of computing pval
-    resMat <- matrix(c(observed.ES,pval),nc=2)
-    rownames(resMat) <- rownames(minPathways); colnames(resMat) <- c("ES","Perm-pval")
-  } # end of if in fixPerm
-
-  # if fixPerm is TRUE, returning two matrices
-  # pi (for reproducibility of results - the permutations were fixed for all S) and piES (for further computations) 
-  if (fixPerm)  return(list("observedES"= observed.ES,"rankedL"=L,"minPathways"=minPathways,"NgeneSets"=NgeneSets,
-                            "Nperm"=nperm,"rankMetric"=rankMetric,"weightP"=p,"pi"=pi,"piES"=piES))
-  else return(list("ES"=resMat,"rankedL"=L,"minPathways"=minPathways,
-                   "NgeneSets"=NgeneSets,"Nperm"=nperm,"rankMetric"=rankMetric,"weightP"=p))  
-} # end of function perm.ES
-
-################################################################################
-# compute.ES computes the enrichment score ES for a given gene set S using
-# the ranked list of genes L consisting of the ranking metric (t-statistic or corr etc) and 
-# the weight p to control the step size when a gene in S is hit during the walk (scan) from top to bottom of L 
-compute.ES <- function(S,L,p=1){
-  N <- length(L) # number of genes in the gene list
-  NH <- length(S)  # number of genes in the gene set S
-  contrib <- rep(-1/(N-NH), N)  # vector of contributions from each gene not in the set S
-  # now replacing the values in the positions of genes in set S with their contributions 
-  S.indices <- which(names(L) %in% S) # positions of S-genes in L
-  NR <-  sum(abs(L[S.indices])^p)
-  contrib[S.indices] <- abs(L[S.indices])^p/NR
-  Esi <- cumsum(contrib)
-  #plot(Esi,type = "l")
-  computedES <- Esi[which.max(abs(Esi))] # max deviation of Phit-Pmiss from 0; i.e. max abs value with its' sign
-  return(computedES)
-} # end of function compute.ES
-
-################################################################################
-# compute.L computes a ranked list of genes using three input arguments
-# 1. the expression data matrix (N genes x k samples and no pheno labels) 
-# to rank order the N genes in it to form L = {g1,g2,...gN} according to a
-# 2. ranking metric (t-statistic, correlation etc) where the gene expression is the response variable and 
-# 3. the phenotype (here AML/ALL) is the explanatory variable
-# using switch so that ranking metric(s) can be added in future 
-
-compute.L <- function(exprData,phenLabels,rankMetric="t-statistic"){
-    L <- switch(rankMetric,
-           "t-statistic" = apply(exprData,1,function(x) t.test(x~phenLabels)$statistic),
-           "corr" = apply(exprData,1,function(x) { summ <- summary(lm(x~phenLabels)) 
-                                                   sign(summ$coefficients[2,1])*sqrt(summ$r.squared) })
-             ) # end of switch
-  L <- sort(L,decreasing=TRUE) # sorted in decreasing order to get the ranked list of genes
-  return(L)
-} # end of compute.L
-
-################################################################################
-# function to extract the expression data, phenotype labels and gene labels separately from D
-format.D <- function(data){
-  colnames(data) <- paste("p",1:ncol(data),sep="") 
-  phenLabels <- unlist(data[1,])
-  data <- as.matrix(data[-1,])
-  class(data) <- "numeric"
-  geneLabels <- rownames(data) # apply(phenLabels,1,table) ALL 47; AML 25
-  return(list("exprData"=data,"phenLabels"=phenLabels,"geneLabels"=geneLabels))
-} # end of function format.D
-
-
-
-
-
-
-
