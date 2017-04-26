@@ -16,8 +16,8 @@ Nominal p-value for each ES(S) is computed using permutation test procedure. The
 When multiple gene sets are evaluated, the ES for each gene set S is normalized to account for the size of the set to give normalized ES (NES). For each NES, the false discovery rate (FDR) is computed by comparing the observed and null distributions of NES. The null  distributions of NES are generated for each gene set S using a fixed set of permutations for S.
 ## Input Files
 Two example input files are part of this repo:
-leukemia.txt: The first row of this file contains the phenotype labels for the two phenotypic states for *k* samples. The gene expression data (*N* genes and *k* samples) are available from the second row onwards with the gene name in the first column followed by *k* expression values for the samples.
-pathways .txt: This is a tab delimited file with each row corresponding to a pathway/gene set starting with the pathway/gene set name followed by a tab space, a description of the pathway/gene set followed by a tab space and then the gene names in that pathway/gene set. 
+1. leukemia.txt: The first row of this file contains the phenotype labels for the two phenotypic states for *k* samples. The gene expression data (*N* genes and *k* samples) are available from the second row onwards with the gene name in the first column followed by *k* expression values for the samples.
+2. pathways .txt: This is a tab delimited file with each row corresponding to a pathway/gene set starting with the pathway/gene set name followed by a tab space, a description of the pathway/gene set followed by a tab space and then the gene names in that pathway/gene set. 
 ## R functions in this repo
 Coming Soon..
 ## Output
