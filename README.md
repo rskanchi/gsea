@@ -40,7 +40,7 @@ rownames(pathways) <- pathways[,1]
 pathways <- pathways[,-(1:2)] # removing annotations 
 ```
 
-Pathways matrix now has pathway/gene set names as row names, and each row contains names of genes in the corresponding pathway. Pathways file in this format is required as an input.
+Pathways matrix with pathway/gene set names as row names, and each row containing names of genes in the corresponding pathwayis required as an input.
 
 ## R functions in this repository
 Coming Soon..
