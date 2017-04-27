@@ -40,9 +40,13 @@ rownames(pathways) <- pathways[,1]
 pathways <- pathways[,-(1:2)] # removing annotations 
 ```
 
-Pathways matrix with pathway/gene set names as row names, and each row containing names of genes in the corresponding pathwayis required as an input.
+Pathways matrix with pathway/gene set names as row names, and each row containing names of genes in the corresponding pathway is required as an input.
 
 ## R functions in this repository
 Coming Soon..
 ## Output
-For each pathway of interest, the observed enrichment scores (ES) and permutation based p-value significance are computed. Further, using a fixed set of permutations, a null distribution of enrichment scores is generated to compute the normalized enrichment scores for each gene set. The normalized null distributions are also used to compute the FWER p-values and FDR q values for each gene set.
+For each pathway of interest, the observed enrichment scores (ES) and permutation based p-value significance are computed. Further, using a fixed set of permutations, a null distribution of enrichment scores is generated to compute the normalized enrichment scores for each gene set. The normalized null distributions are used to compute the FWER p-values and FDR q values for each gene set. 
+
+**Two output files are generated**
+1. a csv file with pathway/gene set names as row names and five columns (NES, FWER pval, FDR qval, ES, perm pval). 
+2. a pdf file with ...
