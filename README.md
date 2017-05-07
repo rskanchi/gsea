@@ -46,7 +46,7 @@ Pathways matrix with pathway/gene set names as row names, and each row containin
 The ```compute.NES(...)``` function can be used to get the output statistics described in the article (Subramanian et al. 2005). Expression data, phenotype labels and gene sets are required as input arguments in the format discussed in the previous section on input files. Except these three, all other input arguments have default values assigned. More details on the inputs can be found in gsea.R in the function definition.
 The following list of named data objects are returned by ```compute.NES() ```:
 
-***```NES```:** Matrix with rows corresponding to pathway/gene sets given by its’ row names. The columns are ES, permutation based nominal p-value for ES, normalized enrichment score (NES), FWER p-value, FDR q value.
+**```NES```:** Matrix with rows corresponding to pathway/gene sets given by its’ row names. The columns are ES, permutation based nominal p-value for ES, normalized enrichment score (NES), FWER p-value, FDR q value.
 
 **```rankedL```:** Vector with values of the rank metric (correlation, t-statistic etc) used to measure the association of each gene with the phenotype. The *N* genes in the expression data matrix form the Names of the vector. The vector is sorted in decreasing order of the values of the rank metric.
 
