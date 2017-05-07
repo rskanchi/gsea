@@ -42,11 +42,19 @@ pathways <- pathways[,-(1:2)] # removing annotations
 
 Pathways matrix with pathway/gene set names as row names, and each row containing names of genes in the corresponding pathway is required as an input.
 
-## R functions in this repository
-Coming Soon..
-## Output
-For each pathway of interest, the observed enrichment scores (ES) and permutation based p-value significance are computed. Further, using a fixed set of permutations, a null distribution of enrichment scores is generated to compute the normalized enrichment scores for each gene set. The normalized null distributions are used to compute the FWER p-values and FDR q values for each gene set. 
-
-**Two output files are generated**
-1. a csv file with pathway/gene set names as row names and five columns (NES, FWER pval, FDR qval, ES, perm pval). 
-2. a pdf file with ...
+## The compute.NES() function
+The ```R compute.NES(...)``` function can be used to get the output statistics described in the article (Subramanian et al. 2005). Expression data, phenotype labels and gene sets are required as input arguments in the format discussed in the previous section on input files. Except these three, all other input arguments have default values assigned. More details on the inputs can be found in gsea.R in the function definition.
+The following list of named data objects are returned by```R compute.NES() ```:
+**NES:** Matrix with rows corresponding to pathway/gene sets given by its’ row names. The columns are ES, permutation based nominal p-value for ES, normalized enrichment score (NES), FWER p-value, FDR q value.
+**rankedL:** Vector with values of the rank metric (correlation, t-statistic etc) used to measure the association of each gene with the phenotype. The *N* genes in the expression data matrix form the Names of the vector. The vector is sorted in decreasing order of the values of the rank metric.
+**Nperm:** Scalar giving the number of permutations used in building the null distributions in the analysis. Number of permutations is an input argument with a default of 1000.
+**minGenes:** Scalar giving the minimum number of genes common to the pathway/gene set and the expression data set. ```RminGenes``` is an input argument with a default of 15. Pathways/gene sets with at least ```RminGenes``` genes can be selected for robust analyses.
+**rankMetric:** Scalar with the character value of the rank metric (ex. “Corr” or “t-statistic”). This is an input argument.
+**weightP:** Scalar giving the value of the weight used in computing the ES. This is an input argument.
+**fixedPermutations:** Matrix giving the indices for fixed permutations of the phenotype labels in generating null distribution of ES. This matrix has ```RNperm``` columns each with *k* (number of samples) rows giving the specific permutation of pheno labels.
+For each pathway of interest, the observed enrichment scores (ES) and permutation based p-value significance are computed. Further, using a fixed set of permutations, a null distribution of enrichment scores is generated to compute the normalized enrichment scores for each gene set. The normalized null distributions are also used to compute the FWER p-values and FDR q values for each gene set.
+#### Usage example
+```R
+myRes <- compute.NES(exprData, phenLabels, pathways, minGenes=15, rankMetric="t-statistic",p=1, nperm=1000, pi=NULL,computeMinpathways=TRUE)
+```
+The above output objects can be accessed as ```RmyRes$NES```, ```RmyRes$rankedL``` etc., and printed to file formats of choice.
