@@ -52,7 +52,7 @@ The following list of named data objects are returned by ```compute.NES() ```:
 
 **```Nperm```:** Scalar giving the number of permutations used in building the null distributions in the analysis. Number of permutations is an input argument with a default of 1000.
 
-**```minGenes```:** Scalar giving the minimum number of genes common to the pathway/gene set and the expression data set. ```minGenes``` is an input argument with a default of 15. Pathways/gene sets with at least ```minGenes``` genes can be selected for robust analyses.
+**```minGenes```:** Scalar giving the minimum number of genes common between each pathway/gene set and the genes in the expression data set. ```minGenes``` is an input argument with a default of 15. Pathways/gene sets with at least ```minGenes``` genes can be selected for robust analyses.
 
 **```rankMetric```:** Scalar with the character value of the rank metric (ex. “Corr” or “t-statistic”). This is an input argument.
 
