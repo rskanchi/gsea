@@ -52,7 +52,7 @@ The following list of named data objects are returned by ```compute.NES() ```:
 
 **```Nperm```:** Input argument specifying the number of permutations to be used in building the null distributions in the analyses (default 1000).
 
-**```minGenes```:** Input argument specifying the minimum number of genes from the expression data set that should be available in a pathway/gene set (default 15). Pathways/gene sets with at least ```minGenes``` genes are included for robust analyses if the input argument '''computeMinpathways=TRUE'''.
+**```minGenes```:** Input argument specifying the minimum number of genes from the expression data set that should be available in a pathway/gene set (default 15). Pathways/gene sets with at least ```minGenes``` genes are included for robust analyses if the input argument ```computeMinpathways=TRUE```.
 
 **```rankMetric```:** Input argument with the character value of the rank metric (ex. “Corr” or “t-statistic”).
 
