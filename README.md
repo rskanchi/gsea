@@ -1,7 +1,7 @@
 ## Synopsis
 This repository includes R functions to implement Gene Set Enrichment Analysis (GSEA) following the algorithm described in *Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles*, Subramanian et al. 2005 PNAS 102(43): 15545-15550.
 ## Overview of GSEA
-Genomewide expression data are increasing in volume and variety. The problem today is in developing powerful computational tools and techniques to analyze these data and in extracting biological insight from such information. GSEA overcomes many analytical challenges (refer article) by evaluating the data at the level of gene sets, that is, groups of genes that share common biological function, chromosomal location or regulation.
+Genomewide expression data are increasing in volume and variety. Powerful computational tools and techniques are required to analyze these data, and to extract biological insight from such information. GSEA overcomes many analytical challenges (refer article) by evaluating the data at the level of gene sets, that is, groups of genes that share common biological function, chromosomal location or regulation.
 ### Big picture: GSEA Method...
 * Considers genomewide expression profiles from samples belonging to TWO phenotypic classes
 * Uses an *a priori* defined set of genes S based on biological knowledge (published information about biochemical pathways or coexpression in previous experiments)
