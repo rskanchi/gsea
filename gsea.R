@@ -1,10 +1,11 @@
 # Functions to implement Gene Set Enrichment Analysis (GSEA) based on
-# Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles,
-# Subramanian et al. 2005 PNAS 102(43): 15545-15550
-# Mon/Year: Apr/2017; Author: RS Kanchi
+# Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles.
+# Subramanian et al. 2005 PNAS 102(43): 15545-15550.
 
+###############################################################################
+# function 1
+###############################################################################
 get.ExpressionData <- function(dataFile){
-  
   # get.ExpressionData() is a function to extract the gene expression data and phenotype labels from 
   # a file with format as in leukemia.txt (example input file)
   # Input argument(s): tab delimited data file (as shown below) with k phenotypic labels in the first row, and 
@@ -28,6 +29,8 @@ get.ExpressionData <- function(dataFile){
 } # end of function get.ExpressionData
 
 ###############################################################################
+# function 2
+###############################################################################
 get.minPathways <- function(pathways,geneList,minGenes=15){ 
 
   # get.minPathways() is a function to get the pathways/gene sets with at least a specified number (minGenes) of genes
@@ -49,7 +52,9 @@ get.minPathways <- function(pathways,geneList,minGenes=15){
   return(list("minPathways"= minPathways,"NgeneSets"= NgeneSets))
 } #end of function get.minPathways
 
-################################################################################
+###############################################################################
+# function 3
+###############################################################################
 compute.L <- function(exprData,phenLabels,rankMetric="t-statistic"){
   # compute.L computes a ranked list of genes using three input arguments
   # 1. exprData = the expression data matrix (N genes x k samples), gene names as rownames of the matrix 
@@ -68,7 +73,9 @@ compute.L <- function(exprData,phenLabels,rankMetric="t-statistic"){
   return(L)
 } # end of compute.L
 
-###################################################################################
+###############################################################################
+# function 4
+###############################################################################
 compute.ES <- function(S,L,p=1){
   # compute.ES computes the enrichment score ES for a given gene set S using
   # the ranked list of genes L consisting of the ranking metric (t-statistic or corr etc) and 
@@ -87,7 +94,9 @@ compute.ES <- function(S,L,p=1){
   return(computedES)
 } # end of function compute.ES
 
-################################################################################
+###############################################################################
+# function 5
+###############################################################################
 compute.NES <- function(exprData, phenLabels, pathways, minGenes=15, rankMetric="t-statistic",p=1,
                         nperm=1000, pi=NULL,computeMinpathways=FALSE){
   # compute.NES computes the normalized enrichment scores, FWER p-value, FDR q value for the pathways/gene sets of interest
@@ -155,7 +164,9 @@ compute.NES <- function(exprData, phenLabels, pathways, minGenes=15, rankMetric=
               "rankMetric"=rankMetric,"weightP"=p,"fixedPermutations"=pi))  # returning fixed permutations for reproducibility of results
 } # end of compute.NES
 
-################################################################################
+###############################################################################
+# function 6
+###############################################################################
 perm.ES <- function(exprData, phenLabels, pathways, minGenes=15, rankMetric="t-statistic", p=1, 
                     nperm=1000, fixPerm=FALSE, pi=NULL,computeMinpathways=FALSE){
   # function to estimate significance of the observed ES using permutations
